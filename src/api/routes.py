@@ -1,24 +1,45 @@
 import logging
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas import AuthResponse, LoginRequest, RegisterRequest, RegisterResponse, TaskOut, UserOut
-from repository.models import (
-    User,
+from api.schemas import (
+    AuthResponse,
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
+    TaskIn,
+    TaskOut,
+    UserOut,
 )
-from repository.database import get_session
 from repository.crud import (
     create_session,
     create_user,
     get_user_by_login,
     get_user_by_token,
-    list_tasks as list_tasks_query,
+    list_tasks,
     revoke_session,
+    update_tasks,
 )
-from repository.security import TOKEN_TTL_SECONDS, hash_password, normalize_login, verify_password
+from repository.database import get_session
+from repository.models import (
+    User,
+)
+from repository.security import (
+    TOKEN_TTL_SECONDS,
+    hash_password,
+    normalize_login,
+    verify_password,
+)
 
 router = APIRouter()
 logger = logging.getLogger("app.auth")
@@ -35,10 +56,14 @@ def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-AUTH_COOKIE_SECURE = _parse_bool(os.getenv("AUTH_COOKIE_SECURE", "false"))
+AUTH_COOKIE_SECURE = _parse_bool(
+    os.getenv("AUTH_COOKIE_SECURE", "false")
+)
 
 
-def _extract_token(request: Request, required: bool = True) -> str | None:
+def _extract_token(
+    request: Request, required: bool = True
+) -> str | None:
     auth_header = request.headers.get("Authorization")
     if auth_header:
         scheme, _, token = auth_header.partition(" ")
@@ -73,7 +98,11 @@ async def get_current_user(
     return user
 
 
-@router.post("/api/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/api/register",
+    response_model=RegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def register(
     payload: RegisterRequest,
     session: AsyncSession = Depends(get_session),
@@ -82,7 +111,10 @@ async def register(
     if not login:
         logger.error(
             "register missing login",
-            extra={"event": "register_invalid", "reason": "missing_login"},
+            extra={
+                "event": "register_invalid",
+                "reason": "missing_login",
+            },
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -102,7 +134,11 @@ async def register(
         ) from None
     logger.info(
         "register success",
-        extra={"event": "register_success", "login": login, "user_id": user.id},
+        extra={
+            "event": "register_success",
+            "login": login,
+            "user_id": user.id,
+        },
     )
     return RegisterResponse(message="user создан")
 
@@ -115,7 +151,9 @@ async def login(
 ) -> AuthResponse:
     login_value = normalize_login(payload.login)
     user = await get_user_by_login(session, login_value)
-    if user is None or not verify_password(payload.password, user.password_hash):
+    if user is None or not verify_password(
+        payload.password, user.password_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid login or password",
@@ -148,15 +186,33 @@ async def logout(
     token = _extract_token(request, required=False)
     if token:
         await revoke_session(session, token)
-    response.delete_cookie(key=AUTH_COOKIE_NAME, path="/", domain=AUTH_COOKIE_DOMAIN)
+    response.delete_cookie(
+        key=AUTH_COOKIE_NAME, path="/", domain=AUTH_COOKIE_DOMAIN
+    )
 
 
 @router.get("/api/tasks", response_model=list[TaskOut])
-async def list_tasks(
+async def get_tasks(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[TaskOut]:
-    tasks = await list_tasks_query(session, current_user.id)
+    tasks = await list_tasks(session, current_user.id)
     return [
-        TaskOut(id=task.id, title=task.title, is_done=task.is_done) for task in tasks
+        TaskOut(id=task.id, title=task.title, is_done=task.is_done)
+        for task in tasks
+    ]
+
+
+@router.post("/api/tasks", response_model=list[TaskOut])
+async def post_tasks(
+    tasks: list[TaskIn],
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[TaskOut]:
+    tasks = await update_tasks(
+        session, current_user.id, [task.model_dump() for task in tasks]
+    )
+    return [
+        TaskOut(id=task.id, title=task.title, is_done=task.is_done)
+        for task in tasks
     ]

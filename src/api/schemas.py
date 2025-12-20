@@ -32,7 +32,9 @@ class RegisterRequest(BaseModel):
         if not re.search(r"[^A-Za-z0-9]", value):
             missing.append("one special character")
         if missing:
-            raise ValueError("Password must include at least " + ", ".join(missing))
+            raise ValueError(
+                "Password must include at least " + ", ".join(missing)
+            )
         return value
 
 
@@ -66,5 +68,10 @@ class RegisterResponse(BaseModel):
 
 class TaskOut(BaseModel):
     id: int
+    title: str
+    is_done: bool
+
+
+class TaskIn(BaseModel):
     title: str
     is_done: bool
