@@ -11,7 +11,9 @@ from repository.models import AuthSession, Task, User
 from repository.security import TOKEN_TTL_SECONDS, hash_token
 
 
-async def create_user(session: AsyncSession, login: str, password_hash: str) -> User:
+async def create_user(
+    session: AsyncSession, login: str, password_hash: str
+) -> User:
     user = User(login=login, password_hash=password_hash)
     session.add(user)
     try:
@@ -23,15 +25,21 @@ async def create_user(session: AsyncSession, login: str, password_hash: str) -> 
     return user
 
 
-async def get_user_by_login(session: AsyncSession, login: str) -> User | None:
-    result = await session.execute(select(User).where(User.login == login))
+async def get_user_by_login(
+    session: AsyncSession, login: str
+) -> User | None:
+    result = await session.execute(
+        select(User).where(User.login == login)
+    )
     return result.scalar_one_or_none()
 
 
 async def create_session(session: AsyncSession, user_id: int) -> str:
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=TOKEN_TTL_SECONDS)
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        seconds=TOKEN_TTL_SECONDS
+    )
     auth_session = AuthSession(
         user_id=user_id,
         token_hash=token_hash,
@@ -50,7 +58,9 @@ async def revoke_session(session: AsyncSession, token: str) -> None:
     await session.commit()
 
 
-async def get_user_by_token(session: AsyncSession, token: str) -> User | None:
+async def get_user_by_token(
+    session: AsyncSession, token: str
+) -> User | None:
     token_hash = hash_token(token)
     stmt = (
         select(User)
@@ -67,3 +77,19 @@ async def list_tasks(session: AsyncSession, user_id: int) -> list[Task]:
         select(Task).where(Task.user_id == user_id).order_by(Task.id)
     )
     return list(result.scalars().all())
+
+
+async def update_tasks(
+    session: AsyncSession,
+    user_id: int,
+    tasks_dict: list[dict[str, str | bool]],
+) -> list[Task]:
+    try:
+        tasks = [Task(**task, user_id=user_id) for task in tasks_dict]
+        await session.execute(delete(Task).where(user_id == user_id))
+        session.add_all(tasks)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    return tasks
