@@ -3,7 +3,7 @@ name = "todo-backend"
 version = "0.2.0"
 description = "Добавлен функционал регистрации и аутентификации"
 authors = [
-    {name = "Roo10iuM",email = "danil5400000@gmail.com"}
+    {name = "Roo10iuM",email = "danil5400000@gmail.com"},
     {name = "Ariandel",email = "ilya.prudskikh2@mail.ru"}
 ]
 readme = "README.md"
