@@ -202,26 +202,15 @@ Backend env:
 
 1) База (Docker)
 ```powershell
-docker compose up -d db
+docker compose up -d
 ```
 
-2) Установка зависимостей backend
-```powershell
-py -m pip install -U pip
-py -m pip install fastapi "sqlalchemy[asyncio]" alembic asyncpg aiosqlite argon2-cffi httpx pytest pytest-asyncio uvicorn
-```
-
-3) Миграции
+2) Миграции
 ```powershell
 py -m alembic upgrade head
 ```
 
-4) Запуск backend
-```powershell
-$env:PYTHONPATH="src"
-py -m uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
-```
-Документация: http://localhost:8000/docs
+Документация: http://localhost:8090/docs
 
 ## Тесты
 
@@ -239,26 +228,25 @@ py -m pytest -q
 
 Регистрация:
 ```powershell
-curl -i -X POST http://localhost:8000/api/register -H "Content-Type: application/json" -d "{\"login\":\"user_1\",\"password\":\"Strong1!\"}"
+curl -i -X POST http://localhost:8090/api/register -H "Content-Type: application/json" -d "{\"login\":\"user_1\",\"password\":\"Strong1!\"}"
 ```
 
 Логин (cookie):
 ```powershell
-curl -i -c cookie.txt -X POST http://localhost:8000/api/login -H "Content-Type: application/json" -d "{\"login\":\"user_1\",\"password\":\"Strong1!\"}"
+curl -i -c cookie.txt -X POST http://localhost:8090/api/login -H "Content-Type: application/json" -d "{\"login\":\"user_1\",\"password\":\"Strong1!\"}"
 ```
 
 Проверка сессии:
 ```powershell
-curl -i -b cookie.txt http://localhost:8000/api/me
+curl -i -b cookie.txt http://localhost:8090/api/me
 ```
 
 Выход:
 ```powershell
-curl -i -b cookie.txt -X POST http://localhost:8000/api/logout
+curl -i -b cookie.txt -X POST http://localhost:8090/api/logout
 ```
 
 ## Ограничения MVP
 
 - Нет rate limiting и lockout.
-- tasks пока только для чтения (CRUD не реализован полностью).
-- Docker Compose поднимает только БД, backend запускается вручную.
+- И т.д.
