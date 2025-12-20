@@ -3,9 +3,15 @@ from __future__ import annotations
 import os
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-DEFAULT_DATABASE_URL = "postgresql+asyncpg://todo_user:todo_pass@localhost:5432/todo"
+DEFAULT_DATABASE_URL = (
+    "postgresql+asyncpg://todo_user:todo_pass@db:5432/todo"
+)
 
 
 def _normalize_database_url(url: str) -> str:
